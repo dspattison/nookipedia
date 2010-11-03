@@ -39,6 +39,16 @@ def create_files(targetdirs):
 			print "cp file_name os.join('nookipedia', %s, %s+'.html')"%(key, title)
 			shutil.copy(file_name, os.path.join(base, key, title.replace(r'/', '_')+'.html'))
 
+def copy_dict(root, smashed):
+	for k in smashed:
+		os.mkdir(os.path.join(root, k))
+		if isinstance(smashed[k], dict):
+			copy_dict(os.path.join(root, k), smashed[k])
+		else:
+			for title, file_name in smashed[k]:
+				shutil.copy(file_name, os.path.join(root, k, title+'.html'))
+
+				
 
 	
 def smash(dirs, level=0):
@@ -56,12 +66,12 @@ def smash(dirs, level=0):
 	return new
 		
 
-def main(argv):
+def main(src, dest):
 	targetdirs = []#array of filename tuples
 	# [('foo', 'path/to/foo.html')]
 	
-	print 'walking %s'%argv[1]
-	for root, dirs, files in os.walk(argv[1]):
+	print 'walking %s'% src
+	for root, dirs, files in os.walk(src):
 		print root, dirs, files
 		for f in files:
 			if not f.endswith('html'):
@@ -76,10 +86,13 @@ def main(argv):
 			targetdirs.append((title, os.path.join(root, f)))
 	targetdirs.sort(key=lambda x:x[0])
 	pprint.pprint(targetdirs)
-	pprint.pprint(smash(targetdirs, 0) )
+	smashed = smash(targetdirs)
+	pprint.pprint(smashed)
+	os.mkdir(dest)
+	copy_dict(dest, smashed)
 	#create_files(targetdirs)
 
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main(sys.argv[1], sys.argv[2])
