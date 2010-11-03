@@ -4,6 +4,8 @@
 import os
 import sys
 import shutil
+import re
+import pprint
 
 def everything_between(content, begin, end):
     idx1=content.find(begin)
@@ -17,11 +19,15 @@ def get_title(html_file):
 	file.close()
 
 	title = everything_between(html, '<title>', '</title>')
+	
+	if len(title) > 100: return None
+	#sani time
+	title = title.lower()
+	title = re.sub('[^a-z0-9]', '_', title)
+	
 	if len(title) > 100: return None
 	return title
 
-def get_key_from_title(title):
-	return title[0].lower()
 
 def create_files(targetdirs):
 	base = 'nookipeda'
@@ -33,14 +39,27 @@ def create_files(targetdirs):
 			print "cp file_name os.join('nookipedia', %s, %s+'.html')"%(key, title)
 			shutil.copy(file_name, os.path.join(base, key, title.replace(r'/', '_')+'.html'))
 
-def main(argv):
-	targetdirs = {}#dict of array to filename tuples
-	#{'a': [('foo', 'path/to/foo.html')]}
-	
-	#init data
-	for i in range(26):
-		targetdirs[chr(ord('a')+i)] = []
 
+	
+def smash(dirs, level=0):
+	if len(dirs) < 40:
+		return dirs
+	new = {}
+	for title, file_name in dirs:
+		k = title[:level+1]
+		if k not in new:
+			new[k] = []
+		new[k].append((title, file_name))
+	for k in new:
+		if len(new[k]) > 40:
+			new[k] = smash(new[k], level+1)
+	return new
+		
+
+def main(argv):
+	targetdirs = []#array of filename tuples
+	# [('foo', 'path/to/foo.html')]
+	
 	print 'walking %s'%argv[1]
 	for root, dirs, files in os.walk(argv[1]):
 		print root, dirs, files
@@ -54,13 +73,11 @@ def main(argv):
 			key = title[0].lower()
 			print "key=", key
 			if not title: raise "Could not get title for %s" % os.path.join(root,f)
-			if key not in targetdirs:
-				print "key not in target dir"
-				continue
-			targetdirs[key].append((title, os.path.join(root, f)))
-
-	print repr(targetdirs)
-	create_files(targetdirs)
+			targetdirs.append((title, os.path.join(root, f)))
+	targetdirs.sort(key=lambda x:x[0])
+	pprint.pprint(targetdirs)
+	pprint.pprint(smash(targetdirs, 0) )
+	#create_files(targetdirs)
 
 
 
